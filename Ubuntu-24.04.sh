@@ -15,11 +15,11 @@ function header_info {
  / / / / __ \/ / / / __ \/ __/ / / /   __/ / // /_ / / / / // /_    | | / / /|_/ /
 / /_/ / /_/ / /_/ / / / / /_/ /_/ /   / __/__  __// /_/ /__  __/    | |/ / /  / /
 \____/_.___/\__,_/_/ /_/\__/\__,_/   /____/ /_/ (_)____/  /_/       |___/_/  /_/
- ____  __   __   ___ _____ _   _
-| __ ) \ \ / /  |_ _|_   _| \ | |
-|  _ \  \ V /    | |  | | |  \| |
-| |_) |  | |     | |  | | | |\  |
-|____/   |_|    |___| |_| |_| \_|
+ ____  __   __      _    ____  ___ _____ ____
+| __ ) \ \ / /     / \  |  _ \|_ _| ____/ ___|
+|  _ \  \ V /     / _ \ | |_) || ||  _| \___ \
+| |_) |  | |     / ___ \|  _ < | || |___ ___) |
+|____/   |_|    /_/   \_\_| \_\___|_____|____/
 
 EOF
 }
@@ -218,9 +218,12 @@ function default_settings() {
   VMID=$(get_valid_nextid)
   FORMAT=",efitype=4m"
   MACHINE=""
-  DISK_SIZE="7G"
+  DISK_SIZE="30G"
   DISK_CACHE=""
   HN="ubuntu"
+  CIUSER="ubuntu"
+  CIPASSWORD=""
+  CI_FORCE_SUDO="no"
   CPU_TYPE=""
   CORE_COUNT="2"
   RAM_SIZE="2048"
@@ -235,6 +238,8 @@ function default_settings() {
   echo -e "${DISKSIZE}${BOLD}${DGN}Disk Size: ${BGN}${DISK_SIZE}${CL}"
   echo -e "${DISKSIZE}${BOLD}${DGN}Disk Cache: ${BGN}None${CL}"
   echo -e "${HOSTNAME}${BOLD}${DGN}Hostname: ${BGN}${HN}${CL}"
+  echo -e "${INFO}${BOLD}${DGN}Cloud-Init User: ${BGN}${CIUSER}${CL}"
+  echo -e "${INFO}${BOLD}${DGN}Cloud-Init Password: ${BGN}Not set${CL}"
   echo -e "${OS}${BOLD}${DGN}CPU Model: ${BGN}KVM64${CL}"
   echo -e "${CPUCORE}${BOLD}${DGN}CPU Cores: ${BGN}${CORE_COUNT}${CL}"
   echo -e "${RAMSIZE}${BOLD}${DGN}RAM Size: ${BGN}${RAM_SIZE}${CL}"
@@ -327,6 +332,49 @@ function advanced_settings() {
   else
     exit-script
   fi
+
+  while true; do
+    if CIUSER=$(whiptail --backtitle "Proxmox VE Helper Scripts" --inputbox "Set Cloud-Init Username" 8 58 ubuntu --title "CLOUD-INIT USER" --cancel-button Exit-Script 3>&1 1>&2 2>&3); then
+      if [ -z "$CIUSER" ]; then
+        CIUSER="ubuntu"
+      fi
+      if [[ "$CIUSER" =~ ^[a-z_][a-z0-9_-]*[$]?$ ]]; then
+        echo -e "${INFO}${BOLD}${DGN}Cloud-Init User: ${BGN}$CIUSER${CL}"
+        break
+      fi
+      whiptail --backtitle "Proxmox VE Helper Scripts" --title "INVALID INPUT" --msgbox "Username must start with a lowercase letter or underscore, and may contain lowercase letters, numbers, hyphen, or underscore." 9 58
+    else
+      exit-script
+    fi
+  done
+
+  CIPASSWORD=""
+  if (whiptail --backtitle "Proxmox VE Helper Scripts" --title "CLOUD-INIT PASSWORD" --yesno "Set a password for user '$CIUSER'?" 10 58); then
+    while true; do
+      if CIPASSWORD=$(whiptail --backtitle "Proxmox VE Helper Scripts" --passwordbox "Enter Cloud-Init password" 8 58 --title "PASSWORD" --cancel-button Exit-Script 3>&1 1>&2 2>&3); then
+        if [ -z "$CIPASSWORD" ]; then
+          whiptail --backtitle "Proxmox VE Helper Scripts" --title "INVALID INPUT" --msgbox "Password cannot be empty." 8 58
+          continue
+        fi
+      else
+        exit-script
+      fi
+
+      if CIPASSWORD_CONFIRM=$(whiptail --backtitle "Proxmox VE Helper Scripts" --passwordbox "Confirm Cloud-Init password" 8 58 --title "CONFIRM PASSWORD" --cancel-button Exit-Script 3>&1 1>&2 2>&3); then
+        if [ "$CIPASSWORD" = "$CIPASSWORD_CONFIRM" ]; then
+          echo -e "${INFO}${BOLD}${DGN}Cloud-Init Password: ${BGN}Set${CL}"
+          break
+        fi
+        whiptail --backtitle "Proxmox VE Helper Scripts" --title "PASSWORD MISMATCH" --msgbox "Passwords do not match. Please try again." 8 58
+      else
+        exit-script
+      fi
+    done
+  else
+    echo -e "${INFO}${BOLD}${DGN}Cloud-Init Password: ${BGN}Not set${CL}"
+  fi
+  CI_FORCE_SUDO="yes"
+  echo -e "${INFO}${BOLD}${DGN}Cloud-Init Sudo Access: ${BGN}Enabled${CL}"
 
   if CPU_TYPE1=$(whiptail --backtitle "Proxmox VE Helper Scripts" --title "CPU MODEL" --radiolist "Choose" --cancel-button Exit-Script 10 58 2 \
     "0" "KVM64 (Default)" ON \
@@ -464,6 +512,66 @@ function start_script() {
     advanced_settings
   fi
 }
+
+function create_cloudinit_user_config() {
+  CICUSTOM=""
+  if [ "${CI_FORCE_SUDO:-no}" != "yes" ]; then
+    return
+  fi
+
+  local snippet_storage snippet_file snippet_ref snippet_path password_hash
+  snippet_storage=$(pvesm status -content snippets 2>/dev/null | awk 'NR>1 {print $1; exit}')
+  if [ -z "$snippet_storage" ]; then
+    echo -e "${INFO}${BOLD}${YW}No snippets storage found; using Proxmox default Cloud-Init user handling${CL}"
+    return
+  fi
+
+  snippet_file="${VMID}-ubuntu2404-user.yaml"
+  snippet_ref="${snippet_storage}:snippets/${snippet_file}"
+  if ! snippet_path=$(pvesm path "$snippet_ref" 2>/dev/null); then
+    echo -e "${INFO}${BOLD}${YW}Unable to prepare Cloud-Init snippet; using Proxmox default Cloud-Init user handling${CL}"
+    return
+  fi
+  mkdir -p "$(dirname "$snippet_path")"
+
+  if [ -n "${CIPASSWORD:-}" ]; then
+    password_hash=$(printf '%s' "$CIPASSWORD" | openssl passwd -6 -stdin)
+    cat >"$snippet_path" <<CLOUDINIT_EOF
+#cloud-config
+hostname: $HN
+manage_etc_hosts: true
+ssh_pwauth: true
+users:
+  - name: $CIUSER
+    gecos: $CIUSER
+    groups: [adm, sudo]
+    shell: /bin/bash
+    sudo: ALL=(ALL) ALL
+    lock_passwd: false
+    passwd: $password_hash
+chpasswd:
+  expire: false
+CLOUDINIT_EOF
+  else
+    cat >"$snippet_path" <<CLOUDINIT_EOF
+#cloud-config
+hostname: $HN
+manage_etc_hosts: true
+ssh_pwauth: false
+users:
+  - name: $CIUSER
+    gecos: $CIUSER
+    groups: [adm, sudo]
+    shell: /bin/bash
+    sudo: ALL=(ALL) ALL
+    lock_passwd: true
+CLOUDINIT_EOF
+  fi
+
+  CICUSTOM="user=$snippet_ref"
+  msg_ok "Configured Cloud-Init sudo user ${CL}${BL}$CIUSER${CL}"
+}
+
 check_root
 arch_check
 pve_check
@@ -546,6 +654,13 @@ qm set $VMID \
   -ide2 ${STORAGE}:cloudinit \
   -boot order=scsi0 \
   -serial0 socket >/dev/null
+create_cloudinit_user_config
+qm set $VMID -ciuser "${CIUSER:-ubuntu}" >/dev/null
+if [ -n "${CICUSTOM:-}" ]; then
+  qm set $VMID -cicustom "$CICUSTOM" >/dev/null
+elif [ -n "${CIPASSWORD:-}" ]; then
+  qm set $VMID -cipassword "$CIPASSWORD" >/dev/null
+fi
 DESCRIPTION=$(
   cat <<EOF
 <div align='center'>
