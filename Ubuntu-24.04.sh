@@ -374,7 +374,7 @@ function advanced_settings() {
     echo -e "${INFO}${BOLD}${DGN}Cloud-Init Password: ${BGN}Not set${CL}"
   fi
   CI_FORCE_SUDO="yes"
-  echo -e "${INFO}${BOLD}${DGN}Cloud-Init Sudo Access: ${BGN}Enabled${CL}"
+  echo -e "${INFO}${BOLD}${DGN}Cloud-Init Sudo Access: ${BGN}Passwordless${CL}"
 
   if CPU_TYPE1=$(whiptail --backtitle "Proxmox VE Helper Scripts" --title "CPU MODEL" --radiolist "Choose" --cancel-button Exit-Script 10 58 2 \
     "0" "KVM64 (Default)" ON \
@@ -546,7 +546,7 @@ users:
     gecos: $CIUSER
     groups: [adm, sudo]
     shell: /bin/bash
-    sudo: ALL=(ALL) ALL
+    sudo: ALL=(ALL) NOPASSWD:ALL
     lock_passwd: false
     passwd: $password_hash
 chpasswd:
@@ -563,7 +563,7 @@ users:
     gecos: $CIUSER
     groups: [adm, sudo]
     shell: /bin/bash
-    sudo: ALL=(ALL) ALL
+    sudo: ALL=(ALL) NOPASSWD:ALL
     lock_passwd: true
 CLOUDINIT_EOF
   fi
