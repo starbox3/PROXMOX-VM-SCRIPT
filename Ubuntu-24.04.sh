@@ -233,13 +233,66 @@ function default_settings() {
   MTU=""
   START_VM="yes"
   METHOD="default"
+
+  if VM_NAME=$(whiptail --backtitle "Proxmox VE Helper Scripts" --inputbox "Set Hostname" 8 58 ubuntu --title "HOSTNAME" --cancel-button Exit-Script 3>&1 1>&2 2>&3); then
+    if [ -z "$VM_NAME" ]; then
+      HN="ubuntu"
+    else
+      HN=$(echo "${VM_NAME,,}" | tr -cs 'a-z0-9-' '-' | sed 's/^-//;s/-$//')
+      if [ -z "$HN" ]; then
+        HN="ubuntu"
+      fi
+      if [ "$HN" != "${VM_NAME,,}" ]; then
+        whiptail --backtitle "Proxmox VE Helper Scripts" --title "HOSTNAME ADJUSTED" --msgbox "Invalid characters detected. Hostname has been adjusted to:\n\n  $HN" 10 58
+      fi
+    fi
+  else
+    exit-script
+  fi
+
+  while true; do
+    if CIUSER=$(whiptail --backtitle "Proxmox VE Helper Scripts" --inputbox "Set Cloud-Init Username" 8 58 ubuntu --title "CLOUD-INIT USER" --cancel-button Exit-Script 3>&1 1>&2 2>&3); then
+      if [ -z "$CIUSER" ]; then
+        CIUSER="ubuntu"
+      fi
+      if [[ "$CIUSER" =~ ^[a-z_][a-z0-9_-]*[$]?$ ]]; then
+        break
+      fi
+      whiptail --backtitle "Proxmox VE Helper Scripts" --title "INVALID INPUT" --msgbox "Username must start with a lowercase letter or underscore, and may contain lowercase letters, numbers, hyphen, or underscore." 9 58
+    else
+      exit-script
+    fi
+  done
+
+  while true; do
+    if CIPASSWORD=$(whiptail --backtitle "Proxmox VE Helper Scripts" --passwordbox "Enter Cloud-Init password for user '$CIUSER'" 8 58 --title "PASSWORD" --cancel-button Exit-Script 3>&1 1>&2 2>&3); then
+      if [ -z "$CIPASSWORD" ]; then
+        whiptail --backtitle "Proxmox VE Helper Scripts" --title "INVALID INPUT" --msgbox "Password cannot be empty." 8 58
+        continue
+      fi
+    else
+      exit-script
+    fi
+
+    if CIPASSWORD_CONFIRM=$(whiptail --backtitle "Proxmox VE Helper Scripts" --passwordbox "Confirm Cloud-Init password" 8 58 --title "CONFIRM PASSWORD" --cancel-button Exit-Script 3>&1 1>&2 2>&3); then
+      if [ "$CIPASSWORD" = "$CIPASSWORD_CONFIRM" ]; then
+        break
+      fi
+      whiptail --backtitle "Proxmox VE Helper Scripts" --title "PASSWORD MISMATCH" --msgbox "Passwords do not match. Please try again." 8 58
+    else
+      exit-script
+    fi
+  done
+  CI_FORCE_SUDO="yes"
+
   echo -e "${CONTAINERID}${BOLD}${DGN}Virtual Machine ID: ${BGN}${VMID}${CL}"
   echo -e "${CONTAINERTYPE}${BOLD}${DGN}Machine Type: ${BGN}i440fx${CL}"
   echo -e "${DISKSIZE}${BOLD}${DGN}Disk Size: ${BGN}${DISK_SIZE}${CL}"
   echo -e "${DISKSIZE}${BOLD}${DGN}Disk Cache: ${BGN}None${CL}"
   echo -e "${HOSTNAME}${BOLD}${DGN}Hostname: ${BGN}${HN}${CL}"
   echo -e "${INFO}${BOLD}${DGN}Cloud-Init User: ${BGN}${CIUSER}${CL}"
-  echo -e "${INFO}${BOLD}${DGN}Cloud-Init Password: ${BGN}Not set${CL}"
+  echo -e "${INFO}${BOLD}${DGN}Cloud-Init Password: ${BGN}Set${CL}"
+  echo -e "${INFO}${BOLD}${DGN}Cloud-Init Sudo Access: ${BGN}Passwordless${CL}"
   echo -e "${OS}${BOLD}${DGN}CPU Model: ${BGN}KVM64${CL}"
   echo -e "${CPUCORE}${BOLD}${DGN}CPU Cores: ${BGN}${CORE_COUNT}${CL}"
   echo -e "${RAMSIZE}${BOLD}${DGN}RAM Size: ${BGN}${RAM_SIZE}${CL}"
