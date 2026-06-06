@@ -714,33 +714,19 @@ if [ -n "${CICUSTOM:-}" ]; then
 elif [ -n "${CIPASSWORD:-}" ]; then
   qm set $VMID -cipassword "$CIPASSWORD" >/dev/null
 fi
+CREATED_AT=$(LC_TIME=C date '+%-d %B %Y %H:%M')
 DESCRIPTION=$(
   cat <<EOF
 <div align='center'>
-  <a href='https://community-scripts.org' target='_blank' rel='noopener noreferrer'>
-    <img src='https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/misc/images/logo-81x112.png' alt='Logo' style='width:81px;height:112px;'/>
+  <a href='https://itn.net.id' target='_blank' rel='noopener noreferrer'>
+    <img src='https://raw.githubusercontent.com/starbox3/PROXMOX-VM-SCRIPT/main/images/logo-itn.png' alt='Logo' style='width:81px;height:81px;'/>
   </a>
 
-  <h2 style='font-size: 24px; margin: 20px 0;'>ubuntu VM</h2>
+  <h2 style='font-size: 24px; margin: 20px 0;'>Ubuntu 24.04 VM</h2>
 
   <p style='margin: 16px 0;'>
-    <a href='https://ko-fi.com/community_scripts' target='_blank' rel='noopener noreferrer'>
-      <img src='https://img.shields.io/badge/&#x2615;-Buy us a coffee-blue' alt='spend Coffee' />
-    </a>
+    VM Created AT ${CREATED_AT}
   </p>
-  
-  <span style='margin: 0 10px;'>
-    <i class="fa fa-github fa-fw" style="color: #f5f5f5;"></i>
-    <a href='https://github.com/community-scripts/ProxmoxVE' target='_blank' rel='noopener noreferrer' style='text-decoration: none; color: #00617f;'>GitHub</a>
-  </span>
-  <span style='margin: 0 10px;'>
-    <i class="fa fa-comments fa-fw" style="color: #f5f5f5;"></i>
-    <a href='https://github.com/community-scripts/ProxmoxVE/discussions' target='_blank' rel='noopener noreferrer' style='text-decoration: none; color: #00617f;'>Discussions</a>
-  </span>
-  <span style='margin: 0 10px;'>
-    <i class="fa fa-exclamation-circle fa-fw" style="color: #f5f5f5;"></i>
-    <a href='https://github.com/community-scripts/ProxmoxVE/issues' target='_blank' rel='noopener noreferrer' style='text-decoration: none; color: #00617f;'>Issues</a>
-  </span>
 </div>
 EOF
 )
