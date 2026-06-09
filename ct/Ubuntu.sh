@@ -13,21 +13,21 @@ variables
 color
 catch_errors
 
-function update_script() {
-  header_info
-  check_container_storage
-  check_container_resources
-  if [[ ! -d /var ]]; then
-    msg_error "No ${APP} Installation Found!"
-    exit
-  fi
-  msg_info "Updating ${APP} LXC"
-  $STD apt-get update
-  $STD apt-get -y upgrade
-  msg_ok "Updated ${APP} LXC"
-  msg_ok "Updated successfully!"
-  exit
-}
+# function update_script() {
+#   header_info
+#   check_container_storage
+#   check_container_resources
+#   if [[ ! -d /var ]]; then
+#     msg_error "No ${APP} Installation Found!"
+#     exit
+#   fi
+#   msg_info "Updating ${APP} LXC"
+#   $STD apt-get update
+#   $STD apt-get -y upgrade
+#   msg_ok "Updated ${APP} LXC"
+#   msg_ok "Updated successfully!"
+#   exit
+# }
 
 function set_custom_description() {
   local created_at os_label
