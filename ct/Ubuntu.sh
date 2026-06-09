@@ -1,3 +1,5 @@
+source <(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/misc/build.func)
+
 APP="Ubuntu"
 var_tags="${var_tags:-os}"
 var_cpu="${var_cpu:-1}"
