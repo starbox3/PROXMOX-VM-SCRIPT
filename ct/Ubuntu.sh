@@ -42,18 +42,16 @@ function set_custom_motd() {
   motd_b64=$(base64 -w 0 <<'MOTDEOF'
 [ -t 1 ] || return 0
 echo -e ""
-echo -e "\033[1mUbuntu LXC Container\033[m"
-echo -e "    \033[36m🌐\033[m  Provided by: \033[1;92mitn.net.id\033[m"
-echo -e ""
+echo -e "Ubuntu LXC Container"
+echo -e "    🌐  \033[m\033[33m Provided by: \033[1;92m itn.net.id \033[m"
 os_display="Unknown OS"
 if [ -r /etc/os-release ]; then
   . /etc/os-release
   os_display="${PRETTY_NAME:-${NAME:-Unknown OS}}"
 fi
 echo -e "    🖥️  \033[m\033[33m OS: \033[1;92m${os_display}\033[m"
-echo -e "    🏠  Hostname: \033[1;92m$(hostname)\033[m"
-echo -e "    💡  IP Address: \033[1;92m$(hostname -I | awk '{print $1}')\033[m"
-echo -e ""
+echo -e "    🏠  \033[m\033[33m Hostname: \033[1;92m$(hostname)\033[m"
+echo -e "    💡  \033[m\033[33m IP Address: \033[1;92m$(hostname -I | awk '{print $1}')\033[m"
 MOTDEOF
 )
   pct exec "$CTID" -- bash -c "
