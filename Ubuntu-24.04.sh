@@ -21,6 +21,8 @@ echo -e "\n Loading..."
 GEN_MAC=02:$(openssl rand -hex 5 | awk '{print toupper($0)}' | sed 's/\(..\)/\1:/g; s/.$//')
 RANDOM_UUID="$(cat /proc/sys/kernel/random/uuid)"
 METHOD=""
+NETPLAN_IP=""
+NETPLAN_GW=""
 NSAPP="ubuntu2404-vm"
 var_os="ubuntu"
 var_version="2404"
@@ -277,6 +279,48 @@ function default_settings() {
     fi
   done
   CI_FORCE_SUDO="yes"
+  NETPLAN_IP=""
+  NETPLAN_GW=""
+
+  if (whiptail --backtitle "Proxmox VE Helper Scripts" --title "NETWORK CONFIGURATION" --yesno "Configure static network for this VM?\n\nIncludes: VLAN Tag + Static IP via Cloud-Init\n(No = DHCP, no VLAN tag)" 13 62); then
+    while true; do
+      if VLAN1=$(whiptail --backtitle "Proxmox VE Helper Scripts" --inputbox "Set VLAN Tag (leave blank for none)" 8 58 --title "VLAN TAG" --cancel-button Exit-Script 3>&1 1>&2 2>&3); then
+        if [ -z "$VLAN1" ]; then
+          VLAN=""
+          break
+        fi
+        if [[ "$VLAN1" =~ ^[0-9]+$ ]] && [ "$VLAN1" -ge 1 ] && [ "$VLAN1" -le 4094 ]; then
+          VLAN=",tag=$VLAN1"
+          break
+        fi
+        whiptail --backtitle "Proxmox VE Helper Scripts" --title "INVALID INPUT" --msgbox "VLAN must be a number between 1 and 4094, or leave blank for none." 8 58
+      else
+        exit-script
+      fi
+    done
+
+    while true; do
+      if NETPLAN_IP=$(whiptail --backtitle "Proxmox VE Helper Scripts" --inputbox "Set Static IP Address (CIDR format)\ne.g., 103.140.189.221/32" 9 62 --title "STATIC IP ADDRESS" --cancel-button Exit-Script 3>&1 1>&2 2>&3); then
+        if [[ "$NETPLAN_IP" =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/[0-9]{1,2}$ ]]; then
+          break
+        fi
+        whiptail --backtitle "Proxmox VE Helper Scripts" --title "INVALID INPUT" --msgbox "Invalid IP/CIDR format.\nUse format: x.x.x.x/xx  (e.g., 103.140.189.221/32)" 9 62
+      else
+        exit-script
+      fi
+    done
+
+    while true; do
+      if NETPLAN_GW=$(whiptail --backtitle "Proxmox VE Helper Scripts" --inputbox "Set Default Gateway\ne.g., 192.168.255.1" 9 62 --title "GATEWAY" --cancel-button Exit-Script 3>&1 1>&2 2>&3); then
+        if [[ "$NETPLAN_GW" =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
+          break
+        fi
+        whiptail --backtitle "Proxmox VE Helper Scripts" --title "INVALID INPUT" --msgbox "Invalid gateway IP.\nUse format: x.x.x.x  (e.g., 192.168.255.1)" 9 62
+      else
+        exit-script
+      fi
+    done
+  fi
 
   echo -e "${CONTAINERID}${BOLD}${DGN}Virtual Machine ID: ${BGN}${VMID}${CL}"
   echo -e "${CONTAINERTYPE}${BOLD}${DGN}Machine Type: ${BGN}i440fx${CL}"
@@ -291,7 +335,17 @@ function default_settings() {
   echo -e "${RAMSIZE}${BOLD}${DGN}RAM Size: ${BGN}${RAM_SIZE}${CL}"
   echo -e "${BRIDGE}${BOLD}${DGN}Bridge: ${BGN}${BRG}${CL}"
   echo -e "${MACADDRESS}${BOLD}${DGN}MAC Address: ${BGN}${MAC}${CL}"
-  echo -e "${VLANTAG}${BOLD}${DGN}VLAN: ${BGN}Default${CL}"
+  if [ -n "${VLAN}" ]; then
+    echo -e "${VLANTAG}${BOLD}${DGN}VLAN: ${BGN}${VLAN#,tag=}${CL}"
+  else
+    echo -e "${VLANTAG}${BOLD}${DGN}VLAN: ${BGN}Default${CL}"
+  fi
+  if [ -n "${NETPLAN_IP}" ]; then
+    echo -e "${GATEWAY}${BOLD}${DGN}Static IP: ${BGN}${NETPLAN_IP}${CL}"
+    echo -e "${GATEWAY}${BOLD}${DGN}Gateway: ${BGN}${NETPLAN_GW}${CL}"
+  else
+    echo -e "${GATEWAY}${BOLD}${DGN}Network Config: ${BGN}DHCP${CL}"
+  fi
   echo -e "${DEFAULT}${BOLD}${DGN}Interface MTU Size: ${BGN}Default${CL}"
   echo -e "${GATEWAY}${BOLD}${DGN}Start VM when completed: ${BGN}yes${CL}"
   echo -e "${CREATING}${BOLD}${DGN}Creating a Ubuntu 24.04 VM using the above default settings${CL}"
@@ -530,6 +584,34 @@ function advanced_settings() {
     fi
   done
 
+  NETPLAN_IP=""
+  NETPLAN_GW=""
+  if (whiptail --backtitle "Proxmox VE Helper Scripts" --title "STATIC NETWORK CONFIG" --yesno "Configure a static IP address for this VM?\n(No = DHCP)" 10 62); then
+    while true; do
+      if NETPLAN_IP=$(whiptail --backtitle "Proxmox VE Helper Scripts" --inputbox "Set Static IP Address (CIDR format)\ne.g., 103.140.189.221/32" 9 62 --title "STATIC IP ADDRESS" --cancel-button Exit-Script 3>&1 1>&2 2>&3); then
+        if [[ "$NETPLAN_IP" =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/[0-9]{1,2}$ ]]; then
+          echo -e "${GATEWAY}${BOLD}${DGN}Static IP: ${BGN}$NETPLAN_IP${CL}"
+          break
+        fi
+        whiptail --backtitle "Proxmox VE Helper Scripts" --title "INVALID INPUT" --msgbox "Invalid IP/CIDR format.\nUse format: x.x.x.x/xx  (e.g., 103.140.189.221/32)" 9 62
+      else
+        exit-script
+      fi
+    done
+
+    while true; do
+      if NETPLAN_GW=$(whiptail --backtitle "Proxmox VE Helper Scripts" --inputbox "Set Default Gateway\ne.g., 192.168.255.1" 9 62 --title "GATEWAY" --cancel-button Exit-Script 3>&1 1>&2 2>&3); then
+        if [[ "$NETPLAN_GW" =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
+          echo -e "${GATEWAY}${BOLD}${DGN}Gateway: ${BGN}$NETPLAN_GW${CL}"
+          break
+        fi
+        whiptail --backtitle "Proxmox VE Helper Scripts" --title "INVALID INPUT" --msgbox "Invalid gateway IP.\nUse format: x.x.x.x  (e.g., 192.168.255.1)" 9 62
+      else
+        exit-script
+      fi
+    done
+  fi
+
   if (whiptail --backtitle "Proxmox VE Helper Scripts" --title "START VIRTUAL MACHINE" --yesno "Start VM when completed?" 10 58); then
     echo -e "${GATEWAY}${BOLD}${DGN}Start VM when completed: ${BGN}yes${CL}"
     START_VM="yes"
@@ -618,6 +700,51 @@ CLOUDINIT_EOF
   msg_ok "Configured Cloud-Init sudo user ${CL}${BL}$CIUSER${CL}"
 }
 
+function create_cloudinit_network_config() {
+  if [ -z "${NETPLAN_IP:-}" ] || [ -z "${NETPLAN_GW:-}" ]; then
+    return
+  fi
+
+  local snippet_storage snippet_file snippet_ref snippet_path
+  snippet_storage=$(pvesm status -content snippets 2>/dev/null | awk 'NR>1 {print $1; exit}')
+  if [ -z "$snippet_storage" ]; then
+    msg_error "No snippets storage found — static network config (${NETPLAN_IP}) will NOT be applied. VM will use DHCP."
+    return
+  fi
+
+  snippet_file="${VMID}-ubuntu2404-network.yaml"
+  snippet_ref="${snippet_storage}:snippets/${snippet_file}"
+  if ! snippet_path=$(pvesm path "$snippet_ref" 2>/dev/null); then
+    msg_error "Unable to resolve snippet path — static network config (${NETPLAN_IP}) will NOT be applied. VM will use DHCP."
+    return
+  fi
+  mkdir -p "$(dirname "$snippet_path")"
+
+  cat >"$snippet_path" <<NETPLAN_EOF
+version: 2
+ethernets:
+  ens18:
+    addresses:
+    - "${NETPLAN_IP}"
+    nameservers:
+      addresses:
+       - "8.8.8.8"
+       - "1.1.1.1"
+      search: []
+    routes:
+    - to: default
+      via: "${NETPLAN_GW}"
+      on-link: true
+NETPLAN_EOF
+
+  if [ -n "${CICUSTOM:-}" ]; then
+    CICUSTOM="${CICUSTOM},network=${snippet_ref}"
+  else
+    CICUSTOM="network=${snippet_ref}"
+  fi
+  msg_ok "Configured static network ${CL}${BL}${NETPLAN_IP}${CL} via ${BL}${NETPLAN_GW}${CL}"
+}
+
 check_root
 arch_check
 pve_check
@@ -701,6 +828,7 @@ qm set $VMID \
   -boot order=scsi0 \
   -serial0 socket >/dev/null
 create_cloudinit_user_config
+create_cloudinit_network_config
 qm set $VMID -ciuser "${CIUSER:-ubuntu}" >/dev/null
 if [ -n "${CICUSTOM:-}" ]; then
   qm set $VMID -cicustom "$CICUSTOM" >/dev/null
