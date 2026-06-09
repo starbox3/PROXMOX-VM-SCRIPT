@@ -15,21 +15,21 @@ variables
 color
 catch_errors
 
-# function update_script() {
-#   header_info
-#   check_container_storage
-#   check_container_resources
-#   if [[ ! -d /var ]]; then
-#     msg_error "No ${APP} Installation Found!"
-#     exit
-#   fi
-#   msg_info "Updating ${APP} LXC"
-#   $STD apt-get update
-#   $STD apt-get -y upgrade
-#   msg_ok "Updated ${APP} LXC"
-#   msg_ok "Updated successfully!"
-#   exit
-# }
+function update_script() {
+  header_info
+  check_container_storage
+  check_container_resources
+  if [[ ! -d /var ]]; then
+    msg_error "No ${APP} Installation Found!"
+    exit
+  fi
+  msg_info "Updating ${APP} LXC"
+  $STD apt-get update
+  $STD apt-get -y upgrade
+  msg_ok "Updated ${APP} LXC"
+  msg_ok "Updated successfully!"
+  exit
+}
 
 function set_custom_description() {
   local created_at os_label
@@ -56,28 +56,25 @@ HTMLEOF
 function set_custom_motd() {
   local motd_b64
   motd_b64=$(base64 -w 0 <<'MOTDEOF'
-#!/bin/bash
-BL="\033[36m"
-GN="\033[1;92m"
-YW="\033[33m"
-CL="\033[m"
-
-IP=$(hostname -I | awk '{print $1}')
-HOSTNAME=$(hostname)
-OS=$(. /etc/os-release && echo "$PRETTY_NAME")
-
+[ -t 1 ] || return 0
 echo -e ""
-echo -e "  ${BL}Ubuntu LXC Container${CL}"
-echo -e "  🌐${CL}  Provided by: ${YW}itn.net.id${CL}"
-echo -e "  🖥️ ${CL}  OS: ${GN}${OS}${CL}"
-echo -e "  🏠${CL}  Hostname: ${GN}${HOSTNAME}${CL}"
-echo -e "  💡${CL}  IP Address: ${GN}${IP}${CL}"
+echo -e "\033[1mUbuntu LXC Container\033[m"
+echo -e "    \033[36m🌐\033[m  Provided by: \033[1;92mitn.net.id\033[m"
+echo -e ""
+os_display="Unknown OS"
+if [ -r /etc/os-release ]; then
+  . /etc/os-release
+  os_display="${PRETTY_NAME:-${NAME:-Unknown OS}}"
+fi
+echo -e "    🖥️  \033[m\033[33m OS: \033[1;92m${os_display}\033[m"
+echo -e "    🏠  Hostname: \033[1;92m$(hostname)\033[m"
+echo -e "    💡  IP Address: \033[1;92m$(hostname -I | awk '{print $1}')\033[m"
 echo -e ""
 MOTDEOF
 )
   pct exec "$CTID" -- bash -c "
-    echo '${motd_b64}' | base64 -d > /etc/profile.d/motd.sh
-    chmod +x /etc/profile.d/motd.sh
+    echo '${motd_b64}' | base64 -d > /etc/profile.d/00_lxc-details.sh
+    rm -f /etc/profile.d/motd.sh
     truncate -s 0 /etc/motd
   "
 }
