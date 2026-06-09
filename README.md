@@ -17,12 +17,26 @@ mkdir -p /etc/ceph
 ln -sf /etc/pve/ceph.conf /etc/ceph/ceph.conf
 ```
 
-## Remove VM / QM
+## Remove LXC Container
 
-Contoh hapus VM dengan VMID `133` beserta disk yang tidak terpakai:
+Ganti `{CTID}` dengan ID container yang ingin dihapus:
 
 ```bash
-qm destroy 133 --destroy-unreferenced-disks 1
+pct destroy {CTID}
+```
+
+Pastikan container dalam keadaan **stopped** sebelum dihapus. Untuk stop terlebih dahulu:
+
+```bash
+pct stop {CTID} && pct destroy {CTID}
+```
+
+## Remove VM / QM
+
+Ganti `{VMID}` dengan ID VM yang ingin dihapus:
+
+```bash
+qm destroy {VMID} --destroy-unreferenced-disks 1
 ```
 
 Pastikan VMID sudah benar sebelum menjalankan perintah ini karena VM akan dihapus.
