@@ -1,6 +1,6 @@
-# PROXMOX VM SCRIPT
+# PROXMOX SCRIPT
 
-Catatan pribadi untuk setup VM Ubuntu 24.04 di Proxmox VE menggunakan script otomatis.
+Catatan pribadi untuk setup VM dan LXC Container Ubuntu 24.04 di Proxmox VE menggunakan script otomatis.
 
 ## Cek Ceph di Proxmox 9.2
 
@@ -27,12 +27,20 @@ qm destroy 133 --destroy-unreferenced-disks 1
 
 Pastikan VMID sudah benar sebelum menjalankan perintah ini karena VM akan dihapus.
 
+## Install LXC Container Ubuntu 24.04
+
+Jalankan script langsung dari raw GitHub:
+
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/starbox3/PROXMOX-SCRIPT/main/ct/Ubuntu.sh)"
+```
+
 ## Install VM Ubuntu 24.04
 
 Jalankan script langsung dari raw GitHub:
 
 ```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/starbox3/PROXMOX-VM-SCRIPT/main/Ubuntu-24.04.sh)"
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/starbox3/PROXMOX-SCRIPT/main/vm/Ubuntu-24.04.sh)"
 ```
 
 ## Catatan
