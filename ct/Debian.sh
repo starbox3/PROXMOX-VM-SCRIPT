@@ -1,12 +1,12 @@
 source <(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/misc/build.func)
 
-APP="Ubuntu"
+APP="Debian"
 var_tags="${var_tags:-os}"
 var_cpu="${var_cpu:-1}"
 var_ram="${var_ram:-512}"
 var_disk="${var_disk:-2}"
-var_os="${var_os:-ubuntu}"
-var_version="${var_version:-24.04}"
+var_os="${var_os:-debian}"
+var_version="${var_version:-13}"
 var_arm64="${var_arm64:-no}"
 var_unprivileged="${var_unprivileged:-1}"
 
@@ -42,7 +42,7 @@ function set_custom_motd() {
   motd_b64=$(base64 -w 0 <<'MOTDEOF'
 [ -t 1 ] || return 0
 echo -e ""
-echo -e "Ubuntu LXC Container"
+echo -e "Debian LXC Container"
 echo -e "    🌐  \033[m\033[33m Provided by: \033[1;92m INDONESIA TRANS NETWORK | itn.net.id \033[m"
 os_display="Unknown OS"
 if [ -r /etc/os-release ]; then
