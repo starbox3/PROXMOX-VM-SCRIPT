@@ -1,6 +1,6 @@
 # PROXMOX SCRIPT
 
-Catatan pribadi untuk setup VM dan LXC Container Ubuntu 24.04 di Proxmox VE menggunakan script otomatis.
+Catatan pribadi untuk setup VM dan LXC Container Ubuntu 24.04 dan Debian 13 di Proxmox VE menggunakan script otomatis.
 
 ## Cek Ceph di Proxmox 9.2
 
@@ -47,6 +47,14 @@ Jalankan script langsung dari raw GitHub:
 
 ```bash
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/starbox3/PROXMOX-SCRIPT/main/ct/Ubuntu.sh)"
+```
+
+## Install LXC Container Debian 13
+
+Jalankan script langsung dari raw GitHub:
+
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/starbox3/PROXMOX-SCRIPT/main/ct/Debian.sh)"
 ```
 
 ## Install VM Ubuntu 24.04
