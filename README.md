@@ -10,6 +10,7 @@ Catatan pribadi untuk setup VM dan LXC Container Ubuntu 24.04 dan Debian 13 di P
 |----|-------|--------------|
 | Ubuntu | 24.04 | [Install LXC Ubuntu 24.04](#install-lxc-container-ubuntu-2404) |
 | Debian | 13 | [Install LXC Debian 13](#install-lxc-container-debian-13) |
+| CasaOS | latest | [Install LXC CasaOS](#install-lxc-container-casaos) |
 
 ### Virtual Machine (VM)
 
@@ -64,7 +65,7 @@ Pastikan VMID sudah benar sebelum menjalankan perintah ini karena VM akan dihapu
 Jalankan script langsung dari raw GitHub:
 
 ```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/starbox3/PROXMOX-SCRIPT/main/ct/Ubuntu.sh)"
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/starbox3/PROXMOX-SCRIPT/main/ct/ubuntu.sh)"
 ```
 
 ## Install LXC Container Debian 13
@@ -72,7 +73,15 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/starbox3/PROXMOX-SCRIPT/
 Jalankan script langsung dari raw GitHub:
 
 ```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/starbox3/PROXMOX-SCRIPT/main/ct/Debian.sh)"
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/starbox3/PROXMOX-SCRIPT/main/ct/debian.sh)"
+```
+
+## Install LXC Container CasaOS
+
+Jalankan script langsung dari raw GitHub:
+
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/starbox3/PROXMOX-SCRIPT/main/ct/casaos.sh)"
 ```
 
 ## Install VM Ubuntu 24.04
@@ -80,7 +89,7 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/starbox3/PROXMOX-SCRIPT/
 Jalankan script langsung dari raw GitHub:
 
 ```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/starbox3/PROXMOX-SCRIPT/main/vm/Ubuntu-24.04.sh)"
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/starbox3/PROXMOX-SCRIPT/main/vm/ubuntu-24.04.sh)"
 ```
 
 ## Install VM Debian 13
@@ -88,7 +97,7 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/starbox3/PROXMOX-SCRIPT/
 Jalankan script langsung dari raw GitHub:
 
 ```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/starbox3/PROXMOX-SCRIPT/main/vm/Debian-13.sh)"
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/starbox3/PROXMOX-SCRIPT/main/vm/debian-13.sh)"
 ```
 
 ## Catatan
