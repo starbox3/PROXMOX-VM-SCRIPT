@@ -11,6 +11,7 @@ Catatan pribadi untuk setup VM dan LXC Container Ubuntu 24.04 dan Debian 13 di P
 | Ubuntu | 24.04 | [Install LXC Ubuntu 24.04](#install-lxc-container-ubuntu-2404) |
 | Debian | 13 | [Install LXC Debian 13](#install-lxc-container-debian-13) |
 | CasaOS | latest | [Install LXC CasaOS](#install-lxc-container-casaos) |
+| n8n | latest | [Install LXC n8n](#install-lxc-container-n8n) |
 
 ### Virtual Machine (VM)
 
@@ -83,6 +84,16 @@ Jalankan script langsung dari raw GitHub:
 ```bash
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/starbox3/PROXMOX-SCRIPT/main/ct/casaos.sh)"
 ```
+
+## Install LXC Container n8n
+
+Jalankan script langsung dari raw GitHub:
+
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/starbox3/PROXMOX-SCRIPT/main/ct/n8n.sh)"
+```
+
+> Setelah install, akses n8n melalui browser: `http://<IP>:5678`
 
 ## Install VM Ubuntu 24.04
 

@@ -1,12 +1,12 @@
 source <(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/misc/build.func)
 
-APP="Ubuntu"
-var_tags="${var_tags:-os}"
-var_cpu="${var_cpu:-1}"
-var_ram="${var_ram:-512}"
-var_disk="${var_disk:-2}"
-var_os="${var_os:-ubuntu}"
-var_version="${var_version:-24.04}"
+APP="n8n"
+var_tags="${var_tags:-automation}"
+var_cpu="${var_cpu:-2}"
+var_ram="${var_ram:-2048}"
+var_disk="${var_disk:-10}"
+var_os="${var_os:-debian}"
+var_version="${var_version:-13}"
 var_arm64="${var_arm64:-no}"
 var_unprivileged="${var_unprivileged:-1}"
 
@@ -19,14 +19,30 @@ function update_script() {
   header_info
   check_container_storage
   check_container_resources
-  if [[ ! -d /var ]]; then
+  if [[ ! -f /etc/systemd/system/n8n.service ]]; then
     msg_error "No ${APP} Installation Found!"
     exit
   fi
-  msg_info "Updating ${APP} LXC"
-  $STD apt-get update
-  $STD apt-get -y upgrade
-  msg_ok "Updated ${APP} LXC"
+
+  ensure_dependencies build-essential python3-setuptools graphicsmagick
+  NODE_VERSION="24" setup_nodejs
+
+  msg_info "Updating n8n"
+  if [ ! -f /opt/n8n.env ]; then
+    sed -i 's|^Environment="N8N_SECURE_COOKIE=false"$|EnvironmentFile=/opt/n8n.env|' /etc/systemd/system/n8n.service
+    mkdir -p /opt
+    cat <<EOF >/opt/n8n.env
+N8N_SECURE_COOKIE=false
+N8N_PORT=5678
+N8N_PROTOCOL=http
+N8N_HOST=$LOCAL_IP
+EOF
+    systemctl daemon-reload
+  fi
+
+  $STD npm update -g n8n
+  systemctl restart n8n
+  msg_ok "Updated n8n"
   msg_ok "Updated successfully!"
   exit
 }
@@ -34,7 +50,7 @@ function update_script() {
 function set_custom_description() {
   local created_at os_label
   created_at=$(LC_TIME=C date '+%-d %B %Y %H:%M')
-  os_label="${APP} ${var_version} LXC Container"
+  os_label="${APP} LXC Container"
   local desc
   desc=$(cat <<HTMLEOF
 <div align='center'>
@@ -58,16 +74,17 @@ function set_custom_motd() {
   motd_b64=$(base64 -w 0 <<'MOTDEOF'
 [ -t 1 ] || return 0
 echo -e ""
-echo -e "Ubuntu LXC Container"
-echo -e "    🌐  \033[m\033[33m Provided by: \033[1;92m INDONESIA TRANS NETWORK | itn.net.id \033[m"
+echo -e "n8n LXC Container"
+echo -e "    🌐  Provided by: itn.net.id"
+echo -e ""
 os_display="Unknown OS"
 if [ -r /etc/os-release ]; then
   . /etc/os-release
   os_display="${PRETTY_NAME:-${NAME:-Unknown OS}}"
 fi
 echo -e "    🖥️  \033[m\033[33m OS: \033[1;92m${os_display}\033[m"
-echo -e "    🏠  \033[m\033[33m Hostname: \033[1;92m$(hostname)\033[m"
-echo -e "    💡  \033[m\033[33m IP Address: \033[1;92m$(hostname -I | awk '{print $1}')\033[m"
+echo -e "    🏠  Hostname: $(hostname)"
+echo -e "    💡  IP Address: $(hostname -I | awk '{print $1}')"
 MOTDEOF
 )
   pct exec "$CTID" -- bash -c "
@@ -88,3 +105,5 @@ msg_ok "Custom branding applied"
 
 msg_ok "Completed successfully!\n"
 echo -e "${CREATING}${GN}${APP} setup has been successfully initialized!${CL}"
+echo -e "${INFO}${YW}Access it using the following URL:${CL}"
+echo -e "${GATEWAY}${BGN}http://${IP}:5678${CL}"
