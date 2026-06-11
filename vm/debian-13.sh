@@ -228,13 +228,31 @@ function default_settings() {
   MAC="$GEN_MAC"
   VLAN=""
   MTU=""
+  CIUSER="debian"
+  CIPASSWORD=""
+  CI_FORCE_SUDO="no"
+  NETPLAN_IP=""
+  NETPLAN_GW=""
   START_VM="yes"
   METHOD="default"
+
   echo -e "${CONTAINERID}${BOLD}${DGN}Virtual Machine ID: ${BGN}${VMID}${CL}"
   echo -e "${CONTAINERTYPE}${BOLD}${DGN}Machine Type: ${BGN}i440fx${CL}"
   echo -e "${DISKSIZE}${BOLD}${DGN}Disk Size: ${BGN}${DISK_SIZE}${CL}"
   echo -e "${DISKSIZE}${BOLD}${DGN}Disk Cache: ${BGN}None${CL}"
-  echo -e "${HOSTNAME}${BOLD}${DGN}Hostname: ${BGN}${HN}${CL}"
+
+  if VM_NAME=$(whiptail --backtitle "Proxmox VE Helper Scripts" --inputbox "Set Hostname" 8 58 debian --title "HOSTNAME" --cancel-button Exit-Script 3>&1 1>&2 2>&3); then
+    if [ -z "$VM_NAME" ]; then
+      HN="debian"
+    else
+      HN=$(echo "${VM_NAME,,}" | tr -cs 'a-z0-9-' '-' | sed 's/^-//;s/-$//')
+      if [ -z "$HN" ]; then HN="debian"; fi
+    fi
+    echo -e "${HOSTNAME}${BOLD}${DGN}Hostname: ${BGN}${HN}${CL}"
+  else
+    exit-script
+  fi
+
   echo -e "${OS}${BOLD}${DGN}CPU Model: ${BGN}KVM64${CL}"
   echo -e "${CPUCORE}${BOLD}${DGN}CPU Cores: ${BGN}${CORE_COUNT}${CL}"
   echo -e "${RAMSIZE}${BOLD}${DGN}RAM Size: ${BGN}${RAM_SIZE}${CL}"
@@ -242,7 +260,68 @@ function default_settings() {
   echo -e "${MACADDRESS}${BOLD}${DGN}MAC Address: ${BGN}${MAC}${CL}"
   echo -e "${VLANTAG}${BOLD}${DGN}VLAN: ${BGN}Default${CL}"
   echo -e "${DEFAULT}${BOLD}${DGN}Interface MTU Size: ${BGN}Default${CL}"
+
   select_cloud_init
+
+  if [ "$CLOUD_INIT" == "yes" ]; then
+    while true; do
+      if CIUSER=$(whiptail --backtitle "Proxmox VE Helper Scripts" --inputbox "Set Cloud-Init Username" 8 58 debian --title "CLOUD-INIT USER" --cancel-button Exit-Script 3>&1 1>&2 2>&3); then
+        if [ -z "$CIUSER" ]; then CIUSER="debian"; fi
+        if [[ "$CIUSER" =~ ^[a-z_][a-z0-9_-]*[$]?$ ]]; then
+          echo -e "${INFO}${BOLD}${DGN}Cloud-Init User: ${BGN}$CIUSER${CL}"
+          break
+        fi
+        whiptail --backtitle "Proxmox VE Helper Scripts" --title "INVALID INPUT" --msgbox "Username must start with a lowercase letter or underscore, and may only contain lowercase letters, numbers, hyphen, or underscore." 9 58
+      else
+        exit-script
+      fi
+    done
+
+    while true; do
+      if CIPASSWORD=$(whiptail --backtitle "Proxmox VE Helper Scripts" --passwordbox "Enter Cloud-Init password for user '$CIUSER'" 8 58 --title "PASSWORD" --cancel-button Exit-Script 3>&1 1>&2 2>&3); then
+        if [ -z "$CIPASSWORD" ]; then
+          whiptail --backtitle "Proxmox VE Helper Scripts" --title "INVALID INPUT" --msgbox "Password cannot be empty." 8 58
+          continue
+        fi
+      else
+        exit-script
+      fi
+      if CIPASSWORD_CONFIRM=$(whiptail --backtitle "Proxmox VE Helper Scripts" --passwordbox "Confirm Cloud-Init password" 8 58 --title "CONFIRM PASSWORD" --cancel-button Exit-Script 3>&1 1>&2 2>&3); then
+        if [ "$CIPASSWORD" = "$CIPASSWORD_CONFIRM" ]; then
+          echo -e "${INFO}${BOLD}${DGN}Cloud-Init Password: ${BGN}Set${CL}"
+          break
+        fi
+        whiptail --backtitle "Proxmox VE Helper Scripts" --title "PASSWORD MISMATCH" --msgbox "Passwords do not match. Please try again." 8 58
+      else
+        exit-script
+      fi
+    done
+    CI_FORCE_SUDO="yes"
+
+    if (whiptail --backtitle "Proxmox VE Helper Scripts" --title "STATIC IP" --yesno "Configure a static IP address for this VM?\n\n(No = DHCP)" 10 62); then
+      while true; do
+        if NETPLAN_IP=$(whiptail --backtitle "Proxmox VE Helper Scripts" --inputbox "Set Static IP Address (CIDR format)\ne.g., 192.168.1.100/24" 9 62 --title "STATIC IP ADDRESS" --cancel-button Exit-Script 3>&1 1>&2 2>&3); then
+          if [[ "$NETPLAN_IP" =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/[0-9]{1,2}$ ]]; then break; fi
+          whiptail --backtitle "Proxmox VE Helper Scripts" --title "INVALID INPUT" --msgbox "Invalid format. Use: x.x.x.x/xx (e.g., 192.168.1.100/24)" 8 62
+        else
+          exit-script
+        fi
+      done
+      while true; do
+        if NETPLAN_GW=$(whiptail --backtitle "Proxmox VE Helper Scripts" --inputbox "Set Default Gateway\ne.g., 192.168.1.1" 9 62 --title "GATEWAY" --cancel-button Exit-Script 3>&1 1>&2 2>&3); then
+          if [[ "$NETPLAN_GW" =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then break; fi
+          whiptail --backtitle "Proxmox VE Helper Scripts" --title "INVALID INPUT" --msgbox "Invalid gateway. Use: x.x.x.x (e.g., 192.168.1.1)" 8 62
+        else
+          exit-script
+        fi
+      done
+      echo -e "${GATEWAY}${BOLD}${DGN}Static IP: ${BGN}${NETPLAN_IP}${CL}"
+      echo -e "${GATEWAY}${BOLD}${DGN}Gateway: ${BGN}${NETPLAN_GW}${CL}"
+    else
+      echo -e "${GATEWAY}${BOLD}${DGN}Network: ${BGN}DHCP${CL}"
+    fi
+  fi
+
   echo -e "${GATEWAY}${BOLD}${DGN}Start VM when completed: ${BGN}yes${CL}"
   echo -e "${CREATING}${BOLD}${DGN}Creating a Debian 13 VM using the above default settings${CL}"
 }
@@ -439,6 +518,71 @@ function advanced_settings() {
 
   select_cloud_init
 
+  CIUSER="debian"
+  CIPASSWORD=""
+  CI_FORCE_SUDO="no"
+  NETPLAN_IP=""
+  NETPLAN_GW=""
+
+  if [ "$CLOUD_INIT" == "yes" ]; then
+    while true; do
+      if CIUSER=$(whiptail --backtitle "Proxmox VE Helper Scripts" --inputbox "Set Cloud-Init Username" 8 58 debian --title "CLOUD-INIT USER" --cancel-button Exit-Script 3>&1 1>&2 2>&3); then
+        if [ -z "$CIUSER" ]; then CIUSER="debian"; fi
+        if [[ "$CIUSER" =~ ^[a-z_][a-z0-9_-]*[$]?$ ]]; then
+          echo -e "${INFO}${BOLD}${DGN}Cloud-Init User: ${BGN}$CIUSER${CL}"
+          break
+        fi
+        whiptail --backtitle "Proxmox VE Helper Scripts" --title "INVALID INPUT" --msgbox "Username must start with a lowercase letter or underscore, and may only contain lowercase letters, numbers, hyphen, or underscore." 9 58
+      else
+        exit-script
+      fi
+    done
+
+    while true; do
+      if CIPASSWORD=$(whiptail --backtitle "Proxmox VE Helper Scripts" --passwordbox "Enter Cloud-Init password for user '$CIUSER'" 8 58 --title "PASSWORD" --cancel-button Exit-Script 3>&1 1>&2 2>&3); then
+        if [ -z "$CIPASSWORD" ]; then
+          whiptail --backtitle "Proxmox VE Helper Scripts" --title "INVALID INPUT" --msgbox "Password cannot be empty." 8 58
+          continue
+        fi
+      else
+        exit-script
+      fi
+      if CIPASSWORD_CONFIRM=$(whiptail --backtitle "Proxmox VE Helper Scripts" --passwordbox "Confirm Cloud-Init password" 8 58 --title "CONFIRM PASSWORD" --cancel-button Exit-Script 3>&1 1>&2 2>&3); then
+        if [ "$CIPASSWORD" = "$CIPASSWORD_CONFIRM" ]; then
+          echo -e "${INFO}${BOLD}${DGN}Cloud-Init Password: ${BGN}Set${CL}"
+          break
+        fi
+        whiptail --backtitle "Proxmox VE Helper Scripts" --title "PASSWORD MISMATCH" --msgbox "Passwords do not match. Please try again." 8 58
+      else
+        exit-script
+      fi
+    done
+    CI_FORCE_SUDO="yes"
+
+    if (whiptail --backtitle "Proxmox VE Helper Scripts" --title "STATIC IP" --yesno "Configure a static IP address for this VM?\n\n(No = DHCP)" 10 62); then
+      while true; do
+        if NETPLAN_IP=$(whiptail --backtitle "Proxmox VE Helper Scripts" --inputbox "Set Static IP Address (CIDR format)\ne.g., 192.168.1.100/24" 9 62 --title "STATIC IP ADDRESS" --cancel-button Exit-Script 3>&1 1>&2 2>&3); then
+          if [[ "$NETPLAN_IP" =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/[0-9]{1,2}$ ]]; then break; fi
+          whiptail --backtitle "Proxmox VE Helper Scripts" --title "INVALID INPUT" --msgbox "Invalid format. Use: x.x.x.x/xx (e.g., 192.168.1.100/24)" 8 62
+        else
+          exit-script
+        fi
+      done
+      while true; do
+        if NETPLAN_GW=$(whiptail --backtitle "Proxmox VE Helper Scripts" --inputbox "Set Default Gateway\ne.g., 192.168.1.1" 9 62 --title "GATEWAY" --cancel-button Exit-Script 3>&1 1>&2 2>&3); then
+          if [[ "$NETPLAN_GW" =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then break; fi
+          whiptail --backtitle "Proxmox VE Helper Scripts" --title "INVALID INPUT" --msgbox "Invalid gateway. Use: x.x.x.x (e.g., 192.168.1.1)" 8 62
+        else
+          exit-script
+        fi
+      done
+      echo -e "${GATEWAY}${BOLD}${DGN}Static IP: ${BGN}${NETPLAN_IP}${CL}"
+      echo -e "${GATEWAY}${BOLD}${DGN}Gateway: ${BGN}${NETPLAN_GW}${CL}"
+    else
+      echo -e "${GATEWAY}${BOLD}${DGN}Network: ${BGN}DHCP${CL}"
+    fi
+  fi
+
   if (whiptail --backtitle "Proxmox VE Helper Scripts" --title "START VIRTUAL MACHINE" --yesno "Start VM when completed?" 10 58); then
     echo -e "${GATEWAY}${BOLD}${DGN}Start VM when completed: ${BGN}yes${CL}"
     START_VM="yes"
@@ -454,6 +598,65 @@ function advanced_settings() {
     echo -e "${ADVANCED}${BOLD}${RD}Using Advanced Settings${CL}"
     advanced_settings
   fi
+}
+
+function create_cloudinit_user_config() {
+  CICUSTOM=""
+  if [ "${CI_FORCE_SUDO:-no}" != "yes" ]; then
+    return
+  fi
+
+  local snippet_storage snippet_file snippet_ref snippet_path password_hash
+  snippet_storage=$(pvesm status -content snippets 2>/dev/null | awk 'NR>1 {print $1; exit}')
+  if [ -z "$snippet_storage" ]; then
+    echo -e "${INFO}${BOLD}${YW}No snippets storage found; using Proxmox default Cloud-Init user handling${CL}"
+    return
+  fi
+
+  snippet_file="${VMID}-debian13-user.yaml"
+  snippet_ref="${snippet_storage}:snippets/${snippet_file}"
+  if ! snippet_path=$(pvesm path "$snippet_ref" 2>/dev/null); then
+    echo -e "${INFO}${BOLD}${YW}Unable to prepare Cloud-Init snippet; using Proxmox default Cloud-Init user handling${CL}"
+    return
+  fi
+  mkdir -p "$(dirname "$snippet_path")"
+
+  if [ -n "${CIPASSWORD:-}" ]; then
+    password_hash=$(printf '%s' "$CIPASSWORD" | openssl passwd -6 -stdin)
+    cat >"$snippet_path" <<CLOUDINIT_EOF
+#cloud-config
+hostname: $HN
+manage_etc_hosts: true
+ssh_pwauth: true
+users:
+  - name: $CIUSER
+    gecos: $CIUSER
+    groups: [adm, sudo]
+    shell: /bin/bash
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    lock_passwd: false
+    passwd: $password_hash
+chpasswd:
+  expire: false
+CLOUDINIT_EOF
+  else
+    cat >"$snippet_path" <<CLOUDINIT_EOF
+#cloud-config
+hostname: $HN
+manage_etc_hosts: true
+ssh_pwauth: false
+users:
+  - name: $CIUSER
+    gecos: $CIUSER
+    groups: [adm, sudo]
+    shell: /bin/bash
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    lock_passwd: true
+CLOUDINIT_EOF
+  fi
+
+  CICUSTOM="user=$snippet_ref"
+  msg_ok "Configured Cloud-Init user ${CL}${BL}$CIUSER${CL}"
 }
 
 function start_script() {
@@ -551,23 +754,8 @@ virt-customize -q -a "$WORK_FILE" --run-command "echo 'Etc/UTC' > /etc/timezone 
 virt-customize -q -a "$WORK_FILE" --run-command "touch /etc/locale.conf" >/dev/null 2>&1 || true
 
 if [ "$CLOUD_INIT" == "yes" ]; then
-  # Cloud-Init handles SSH and login
   virt-customize -q -a "$WORK_FILE" --run-command "sed -i 's/^#*PermitRootLogin.*/PermitRootLogin yes/' /etc/ssh/sshd_config" >/dev/null 2>&1 || true
   virt-customize -q -a "$WORK_FILE" --run-command "sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config" >/dev/null 2>&1 || true
-else
-  # Configure auto-login on serial console (ttyS0) and virtual console (tty1)
-  virt-customize -q -a "$WORK_FILE" --run-command "mkdir -p /etc/systemd/system/serial-getty@ttyS0.service.d" >/dev/null 2>&1 || true
-  virt-customize -q -a "$WORK_FILE" --run-command 'cat > /etc/systemd/system/serial-getty@ttyS0.service.d/autologin.conf << EOF
-[Service]
-ExecStart=
-ExecStart=-/sbin/agetty --autologin root --noclear %I \$TERM
-EOF' >/dev/null 2>&1 || true
-  virt-customize -q -a "$WORK_FILE" --run-command "mkdir -p /etc/systemd/system/getty@tty1.service.d" >/dev/null 2>&1 || true
-  virt-customize -q -a "$WORK_FILE" --run-command 'cat > /etc/systemd/system/getty@tty1.service.d/autologin.conf << EOF
-[Service]
-ExecStart=
-ExecStart=-/sbin/agetty --autologin root --noclear %I \$TERM
-EOF' >/dev/null 2>&1 || true
 fi
 
 msg_ok "Customized image"
@@ -601,7 +789,7 @@ done
 
 msg_info "Creating a Debian 13 VM"
 qm create $VMID -agent 1${MACHINE} -tablet 0 -localtime 1 -bios ovmf${CPU_TYPE} -cores $CORE_COUNT -memory $RAM_SIZE \
-  -name $HN -tags community-script -net0 virtio,bridge=$BRG,macaddr=$MAC$VLAN$MTU -onboot 1 -ostype l26 -scsihw virtio-scsi-pci
+  -name $HN -tags vm-auto-script -net0 virtio,bridge=$BRG,macaddr=$MAC$VLAN$MTU -onboot 1 -ostype l26 -scsihw virtio-scsi-pci
 pvesm alloc $STORAGE $VMID $DISK0 4M 1>&/dev/null
 qm importdisk $VMID ${WORK_FILE} $STORAGE ${DISK_IMPORT:-} 1>&/dev/null
 if [ "$CLOUD_INIT" == "yes" ]; then
@@ -619,36 +807,36 @@ else
     -serial0 socket >/dev/null
 fi
 
-# Clean up work file
 rm -f "$WORK_FILE"
 
-DESCRIPTION=$(
-  cat <<EOF
+if [ "$CLOUD_INIT" == "yes" ]; then
+  create_cloudinit_user_config
+  qm set $VMID -ciuser "${CIUSER:-debian}" >/dev/null
+  if [ -n "${CICUSTOM:-}" ]; then
+    qm set $VMID -cicustom "$CICUSTOM" >/dev/null
+  elif [ -n "${CIPASSWORD:-}" ]; then
+    qm set $VMID -cipassword "$CIPASSWORD" >/dev/null
+  fi
+  if [ -n "${NETPLAN_IP:-}" ] && [ -n "${NETPLAN_GW:-}" ]; then
+    qm set $VMID -ipconfig0 "ip=${NETPLAN_IP},gw=${NETPLAN_GW}" >/dev/null
+    msg_ok "Configured static IP ${CL}${BL}${NETPLAN_IP}${CL} via ${BL}${NETPLAN_GW}${CL}"
+  else
+    qm set $VMID -ipconfig0 "ip=dhcp" >/dev/null
+  fi
+fi
+
+CREATED_AT=$(LC_TIME=C date '+%-d %B %Y %H:%M')
+DESCRIPTION=$(cat <<EOF
 <div align='center'>
-  <a href='https://community-scripts.org' target='_blank' rel='noopener noreferrer'>
-    <img src='https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/misc/images/logo-81x112.png' alt='Logo' style='width:81px;height:112px;'/>
+  <a href='https://itn.net.id' target='_blank' rel='noopener noreferrer'>
+    <img src='https://raw.githubusercontent.com/starbox3/PROXMOX-VM-SCRIPT/main/images/logo-itn.png' alt='Logo' style='width:81px;height:81px;'/>
   </a>
 
-  <h2 style='font-size: 24px; margin: 20px 0;'>Debian VM</h2>
+  <h2 style='font-size: 24px; margin: 20px 0;'>Debian 13 VM</h2>
 
   <p style='margin: 16px 0;'>
-    <a href='https://ko-fi.com/community_scripts' target='_blank' rel='noopener noreferrer'>
-      <img src='https://img.shields.io/badge/&#x2615;-Buy us a coffee-blue' alt='spend Coffee' />
-    </a>
+    VM Created AT ${CREATED_AT}
   </p>
-
-  <span style='margin: 0 10px;'>
-    <i class="fa fa-github fa-fw" style="color: #f5f5f5;"></i>
-    <a href='https://github.com/community-scripts/ProxmoxVE' target='_blank' rel='noopener noreferrer' style='text-decoration: none; color: #00617f;'>GitHub</a>
-  </span>
-  <span style='margin: 0 10px;'>
-    <i class="fa fa-comments fa-fw" style="color: #f5f5f5;"></i>
-    <a href='https://github.com/community-scripts/ProxmoxVE/discussions' target='_blank' rel='noopener noreferrer' style='text-decoration: none; color: #00617f;'>Discussions</a>
-  </span>
-  <span style='margin: 0 10px;'>
-    <i class="fa fa-exclamation-circle fa-fw" style="color: #f5f5f5;"></i>
-    <a href='https://github.com/community-scripts/ProxmoxVE/issues' target='_blank' rel='noopener noreferrer' style='text-decoration: none; color: #00617f;'>Issues</a>
-  </span>
 </div>
 EOF
 )
