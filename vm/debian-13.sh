@@ -516,71 +516,76 @@ function advanced_settings() {
     fi
   done
 
-  select_cloud_init
+  CLOUD_INIT="yes"
+  echo -e "${CLOUD}${BOLD}${DGN}Cloud-Init: ${BGN}yes${CL}"
 
   CIUSER="debian"
   CIPASSWORD=""
-  CI_FORCE_SUDO="no"
+  CI_FORCE_SUDO="yes"
   NETPLAN_IP=""
   NETPLAN_GW=""
 
-  if [ "$CLOUD_INIT" == "yes" ]; then
-    while true; do
-      if CIUSER=$(whiptail --backtitle "Proxmox VE Helper Scripts" --inputbox "Set Cloud-Init Username" 8 58 debian --title "CLOUD-INIT USER" --cancel-button Exit-Script 3>&1 1>&2 2>&3); then
-        if [ -z "$CIUSER" ]; then CIUSER="debian"; fi
-        if [[ "$CIUSER" =~ ^[a-z_][a-z0-9_-]*[$]?$ ]]; then
-          echo -e "${INFO}${BOLD}${DGN}Cloud-Init User: ${BGN}$CIUSER${CL}"
-          break
-        fi
-        whiptail --backtitle "Proxmox VE Helper Scripts" --title "INVALID INPUT" --msgbox "Username must start with a lowercase letter or underscore, and may only contain lowercase letters, numbers, hyphen, or underscore." 9 58
-      else
-        exit-script
+  while true; do
+    if CIUSER=$(whiptail --backtitle "Proxmox VE Helper Scripts" --inputbox "Set Cloud-Init Username" 8 58 debian --title "CLOUD-INIT USER" --cancel-button Exit-Script 3>&1 1>&2 2>&3); then
+      if [ -z "$CIUSER" ]; then CIUSER="debian"; fi
+      if [[ "$CIUSER" =~ ^[a-z_][a-z0-9_-]*[$]?$ ]]; then
+        echo -e "${INFO}${BOLD}${DGN}Cloud-Init User: ${BGN}$CIUSER${CL}"
+        break
       fi
-    done
-
-    while true; do
-      if CIPASSWORD=$(whiptail --backtitle "Proxmox VE Helper Scripts" --passwordbox "Enter Cloud-Init password for user '$CIUSER'" 8 58 --title "PASSWORD" --cancel-button Exit-Script 3>&1 1>&2 2>&3); then
-        if [ -z "$CIPASSWORD" ]; then
-          whiptail --backtitle "Proxmox VE Helper Scripts" --title "INVALID INPUT" --msgbox "Password cannot be empty." 8 58
-          continue
-        fi
-      else
-        exit-script
-      fi
-      if CIPASSWORD_CONFIRM=$(whiptail --backtitle "Proxmox VE Helper Scripts" --passwordbox "Confirm Cloud-Init password" 8 58 --title "CONFIRM PASSWORD" --cancel-button Exit-Script 3>&1 1>&2 2>&3); then
-        if [ "$CIPASSWORD" = "$CIPASSWORD_CONFIRM" ]; then
-          echo -e "${INFO}${BOLD}${DGN}Cloud-Init Password: ${BGN}Set${CL}"
-          break
-        fi
-        whiptail --backtitle "Proxmox VE Helper Scripts" --title "PASSWORD MISMATCH" --msgbox "Passwords do not match. Please try again." 8 58
-      else
-        exit-script
-      fi
-    done
-    CI_FORCE_SUDO="yes"
-
-    if (whiptail --backtitle "Proxmox VE Helper Scripts" --title "STATIC IP" --yesno "Configure a static IP address for this VM?\n\n(No = DHCP)" 10 62); then
-      while true; do
-        if NETPLAN_IP=$(whiptail --backtitle "Proxmox VE Helper Scripts" --inputbox "Set Static IP Address (CIDR format)\ne.g., 192.168.1.100/24" 9 62 --title "STATIC IP ADDRESS" --cancel-button Exit-Script 3>&1 1>&2 2>&3); then
-          if [[ "$NETPLAN_IP" =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/[0-9]{1,2}$ ]]; then break; fi
-          whiptail --backtitle "Proxmox VE Helper Scripts" --title "INVALID INPUT" --msgbox "Invalid format. Use: x.x.x.x/xx (e.g., 192.168.1.100/24)" 8 62
-        else
-          exit-script
-        fi
-      done
-      while true; do
-        if NETPLAN_GW=$(whiptail --backtitle "Proxmox VE Helper Scripts" --inputbox "Set Default Gateway\ne.g., 192.168.1.1" 9 62 --title "GATEWAY" --cancel-button Exit-Script 3>&1 1>&2 2>&3); then
-          if [[ "$NETPLAN_GW" =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then break; fi
-          whiptail --backtitle "Proxmox VE Helper Scripts" --title "INVALID INPUT" --msgbox "Invalid gateway. Use: x.x.x.x (e.g., 192.168.1.1)" 8 62
-        else
-          exit-script
-        fi
-      done
-      echo -e "${GATEWAY}${BOLD}${DGN}Static IP: ${BGN}${NETPLAN_IP}${CL}"
-      echo -e "${GATEWAY}${BOLD}${DGN}Gateway: ${BGN}${NETPLAN_GW}${CL}"
+      whiptail --backtitle "Proxmox VE Helper Scripts" --title "INVALID INPUT" --msgbox "Username must start with a lowercase letter or underscore, and may only contain lowercase letters, numbers, hyphen, or underscore." 9 58
     else
-      echo -e "${GATEWAY}${BOLD}${DGN}Network: ${BGN}DHCP${CL}"
+      exit-script
     fi
+  done
+
+  while true; do
+    if CIPASSWORD=$(whiptail --backtitle "Proxmox VE Helper Scripts" --passwordbox "Enter Cloud-Init password for user '$CIUSER'" 8 58 --title "PASSWORD" --cancel-button Exit-Script 3>&1 1>&2 2>&3); then
+      if [ -z "$CIPASSWORD" ]; then
+        whiptail --backtitle "Proxmox VE Helper Scripts" --title "INVALID INPUT" --msgbox "Password cannot be empty." 8 58
+        continue
+      fi
+    else
+      exit-script
+    fi
+    if CIPASSWORD_CONFIRM=$(whiptail --backtitle "Proxmox VE Helper Scripts" --passwordbox "Confirm Cloud-Init password" 8 58 --title "CONFIRM PASSWORD" --cancel-button Exit-Script 3>&1 1>&2 2>&3); then
+      if [ "$CIPASSWORD" = "$CIPASSWORD_CONFIRM" ]; then
+        echo -e "${INFO}${BOLD}${DGN}Cloud-Init Password: ${BGN}Set${CL}"
+        break
+      fi
+      whiptail --backtitle "Proxmox VE Helper Scripts" --title "PASSWORD MISMATCH" --msgbox "Passwords do not match. Please try again." 8 58
+    else
+      exit-script
+    fi
+  done
+
+  while true; do
+    if NETPLAN_IP=$(whiptail --backtitle "Proxmox VE Helper Scripts" --inputbox "Set Static IP Address (CIDR format, leave blank for DHCP)\ne.g., 192.168.1.100/24" 9 62 --title "IP ADDRESS" --cancel-button Exit-Script 3>&1 1>&2 2>&3); then
+      if [ -z "$NETPLAN_IP" ]; then
+        echo -e "${GATEWAY}${BOLD}${DGN}IP Address: ${BGN}DHCP${CL}"
+        break
+      fi
+      if [[ "$NETPLAN_IP" =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/[0-9]{1,2}$ ]]; then
+        echo -e "${GATEWAY}${BOLD}${DGN}IP Address: ${BGN}${NETPLAN_IP}${CL}"
+        break
+      fi
+      whiptail --backtitle "Proxmox VE Helper Scripts" --title "INVALID INPUT" --msgbox "Invalid format. Use: x.x.x.x/xx (e.g., 192.168.1.100/24) or leave blank for DHCP." 8 62
+    else
+      exit-script
+    fi
+  done
+
+  if [ -n "$NETPLAN_IP" ]; then
+    while true; do
+      if NETPLAN_GW=$(whiptail --backtitle "Proxmox VE Helper Scripts" --inputbox "Set Default Gateway\ne.g., 192.168.1.1" 9 62 --title "GATEWAY" --cancel-button Exit-Script 3>&1 1>&2 2>&3); then
+        if [[ "$NETPLAN_GW" =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
+          echo -e "${GATEWAY}${BOLD}${DGN}Gateway: ${BGN}${NETPLAN_GW}${CL}"
+          break
+        fi
+        whiptail --backtitle "Proxmox VE Helper Scripts" --title "INVALID INPUT" --msgbox "Invalid gateway. Use: x.x.x.x (e.g., 192.168.1.1)" 8 62
+      else
+        exit-script
+      fi
+    done
   fi
 
   if (whiptail --backtitle "Proxmox VE Helper Scripts" --title "START VIRTUAL MACHINE" --yesno "Start VM when completed?" 10 58); then
